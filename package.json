@@ -1,0 +1,31 @@
+{
+  "name": "@nexical/agent",
+  "version": "1.0.0",
+  "main": "dist/main.js",
+  "type": "module",
+  "exports": {
+    ".": "./dist/main.js",
+    "./src/*": "./src/*"
+  },
+  "bin": {
+    "agent": "dist/main.js"
+  },
+  "scripts": {
+    "dev": "bun run src/main.ts",
+    "build": "bun build ./src/main.ts --outfile ./dist/main.js",
+    "compile": "bun build ./src/main.ts --compile --outfile ./bin/agent",
+    "compile:all": "bun run scripts/build-binaries.ts",
+    "start": "bun run dist/main.js",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@nexical/sdk": "*",
+    "dotenv": "^17.2.3",
+    "zod": "^4.3.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.1",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
