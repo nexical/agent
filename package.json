@@ -12,12 +12,12 @@
   },
   "scripts": {
     "generate": "bun run scripts/generate.ts",
-    "dev": "bun run src/main.ts",
-    "build": "bun build ./src/main.ts --target bun --outfile ./dist/main.js",
-    "compile": "bun build ./src/main.ts --compile --outfile ./bin/agent",
-    "compile:all": "bun run scripts/build-binaries.ts",
-    "start": "bun run dist/main.js",
-    "test": "bun test"
+    "dev": "npm run generate && bun run src/main.ts",
+    "build": "npm run generate && bun build ./src/main.ts --target bun --outfile ./dist/main.js",
+    "compile": "npm run generate && bun build ./src/main.ts --compile --outfile ./bin/agent",
+    "compile:all": "npm run generate && bun run scripts/build-binaries.ts",
+    "start": "npm run generate && bun run dist/main.js",
+    "test": "npm run generate && bun test"
   },
   "dependencies": {
     "@nexical/sdk": "*",
