@@ -4,11 +4,20 @@
     "baseUrl": ".",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "outDir": "./dist",
     "paths": {
-      "@/*": ["./src/*"],
-      "@modules/*": ["../../modules/*"],
-      "@nexical/agent/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@modules/*": [
+        "../../modules/*"
+      ],
+      "@nexical/agent/*": [
+        "./src/*"
+      ]
     }
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*"
+  ]
 }
