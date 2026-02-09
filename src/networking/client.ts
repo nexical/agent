@@ -1,5 +1,5 @@
 import { NexicalClient } from '@nexical/sdk';
-import type { RegisterAgentDTO } from '@modules/orchestrator-api/src/sdk/index.js';
+import { OrchestratorModuleTypes } from '@nexical/sdk';
 import { AgentAuthStrategy } from './auth.js';
 import type { AgentJob, AgentResult } from '../core/types.js';
 
@@ -34,7 +34,7 @@ export class AgentClient {
     capabilities: string[];
   }): Promise<void> {
     console.info('[AgentClient] Registering agent:', dto);
-    await this.client.orchestrator.agent.registerAgent(dto as RegisterAgentDTO);
+    await this.client.orchestrator.agent.registerAgent(dto as OrchestratorModuleTypes.RegisterAgentDTO);
   }
 
   public async complete(jobId: string, result: AgentResult): Promise<void> {
@@ -46,7 +46,7 @@ export class AgentClient {
   }
 
   public async updateProgress(jobId: string, progress: number): Promise<void> {
-    await this.client.orchestrator.job.updateProgress(jobId, { progress });
+    await this.client.orchestrator.job.updateProgress(jobId, { id: jobId, progress });
   }
 
   /**
