@@ -11,6 +11,7 @@
     "agent": "dist/main.js"
   },
   "scripts": {
+    "generate": "bun run scripts/generate.ts",
     "dev": "bun run src/main.ts",
     "build": "bun build ./src/main.ts --target bun --outfile ./dist/main.js",
     "compile": "bun build ./src/main.ts --compile --outfile ./bin/agent",
@@ -24,6 +25,7 @@
     "zod": "^4.3.0"
   },
   "devDependencies": {
+    "globby": "^14.0.1",
     "tsup": "^8.0.1",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
