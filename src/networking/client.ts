@@ -34,7 +34,9 @@ export class AgentClient {
     capabilities: string[];
   }): Promise<void> {
     console.info('[AgentClient] Registering agent:', dto);
-    await this.client.orchestrator.agent.registerAgent(dto as OrchestratorModuleTypes.RegisterAgentDTO);
+    await this.client.orchestrator.agent.registerAgent(
+      dto as OrchestratorModuleTypes.RegisterAgentDTO,
+    );
   }
 
   public async complete(jobId: string, result: AgentResult): Promise<void> {
