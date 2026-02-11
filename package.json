@@ -2,9 +2,9 @@
   "name": "@nexical/agent",
   "version": "1.0.0",
   "type": "module",
-  "main": "dist/main.js",
+  "main": "src/index.ts",
   "exports": {
-    ".": "./dist/main.js",
+    ".": "./src/index.ts",
     "./src/*": "./src/*"
   },
   "bin": {
