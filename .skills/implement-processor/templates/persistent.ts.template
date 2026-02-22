@@ -1,0 +1,63 @@
+import { PersistentAgent } from '@nexical/agent/core/index.js';
+
+/**
+ * Configuration for the {{pascalName}} Agent.
+ */
+export interface {{pascalName}}Config {
+  /**
+   * Interval in milliseconds for the tick loop.
+   */
+  intervalMs?: number;
+
+  // Add more configuration properties here
+}
+
+/**
+ * {{pascalName}} Agent implements continuous, tick-based background processing.
+ */
+export class {{pascalName}}Agent extends PersistentAgent {
+  /**
+   * Unique name for the agent process.
+   */
+  public name = '{{kebabName}}-agent';
+
+  /**
+   * Explicit configuration object.
+   */
+  private config: {{pascalName}}Config;
+
+  /**
+   * Constructor following the Configuration-Driven Initialization pattern.
+   *
+   * @param config - Configuration object for the agent.
+   */
+  constructor(config: {{pascalName}}Config) {
+    super();
+    this.config = config;
+
+    // Override the default tick interval if provided
+    if (config.intervalMs) {
+      this.intervalMs = config.intervalMs;
+    }
+  }
+
+  /**
+   * Continuous execution logic called on every tick.
+   * This method MUST be implemented as the main loop logic.
+   */
+  public async tick(): Promise<void> {
+    this.logger.info(`Starting {{pascalName}} tick...`);
+
+    try {
+      // 1. Identify work to be done (e.g., query DB, check filesystem, poll external API)
+
+      // 2. Perform business logic using this.api and other services.
+
+      this.logger.info(`Successfully completed {{pascalName}} tick.`);
+    } catch (error: unknown) {
+      this.logger.error(`{{pascalName}} tick failed: ${error instanceof Error ? error.message : String(error)}`);
+      // Note: The AgentSupervisor will catch unhandled errors and restart the agent if it crashes.
+      throw error;
+    }
+  }
+}

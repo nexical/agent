@@ -1,0 +1,64 @@
+import { PersistentAgent, type AgentContext } from '../core/index.js';
+import { NexicalClient, AgentAuthStrategy } from '../networking/index.js';
+
+/**
+ * [AgentName]PersistentAgent
+ *
+ * A continuous background worker that executes the tick() method at a defined interval.
+ * It uses a controlled while loop to manage its lifecycle and graceful shutdown.
+ */
+export class [AgentName]PersistentAgent extends PersistentAgent {
+  public name = '[agent-name]';
+  private intervalMs = parseInt(process.env.AGENT_[UPPER_NAME]_INTERVAL || '60000');
+  private api: NexicalClient;
+
+  constructor() {
+    super();
+    // Initialize the standardized SDK client
+    this.api = new NexicalClient({
+      baseUrl: process.env.AGENT_API_URL,
+      authStrategy: new AgentAuthStrategy(process.env.AGENT_API_TOKEN)
+    });
+  }
+
+  /**
+   * The core logic executed by the agent on each tick.
+   * Individual failures within this method are isolated to prevent crashing the agent.
+   */
+  protected async tick(): Promise<void> {
+    try {
+      this.logger.info(`[${this.name}] Starting tick...`);
+      
+      // Implement business logic here
+      // Example: const data = await this.api.get('/endpoint');
+
+      this.logger.info(`[${this.name}] Tick completed successfully.`);
+    } catch (error) {
+      this.logger.error(`[${this.name}] Tick failed:`, error);
+    }
+  }
+
+  /**
+   * Manages the continuous lifecycle of the persistent agent.
+   * Uses a while loop with a 'running' flag and error isolation.
+   */
+  public async run(): Promise<void> {
+    this.logger.info(`[${this.name}] Starting persistent agent...`);
+    this.running = true;
+
+    while (this.running) {
+      try {
+        await this.tick();
+      } catch (error) {
+        this.logger.error(`[${this.name}] Unexpected error in persistent loop:`, error);
+      }
+
+      if (this.running) {
+        // Wait for the defined interval before the next tick
+        await new Promise(resolve => setTimeout(resolve, this.intervalMs));
+      }
+    }
+
+    this.logger.info(`[${this.name}] Persistent agent stopped.`);
+  }
+}

@@ -1,0 +1,78 @@
+import { fork, spawn, type ChildProcess } from 'node:child_process';
+import { z } from 'zod';
+import { type NexicalClient } from '@/lib/api.js';
+
+/**
+ * Zod schema for Supervisor configuration.
+ * Every input payload or configuration MUST have a corresponding Zod schema for validation.
+ */
+export const SupervisorConfigSchema = z.object({
+  entryPoint: z.string(),
+  maxRestarts: z.number().default(5),
+  restartDelay: z.number().default(5000),
+});
+
+export type SupervisorConfig = z.infer<typeof SupervisorConfigSchema>;
+
+/**
+ * AgentSupervisor: Manages the execution environment and lifecycle of child processes.
+ * Each component exports its primary logic as a named class export.
+ */
+export class AgentSupervisor {
+  private child: ChildProcess | null = null;
+  private config: SupervisorConfig;
+
+  /**
+   * Dependencies are passed through the constructor and stored as private properties.
+   * Constructor-Based Dependency Injection.
+   */
+  constructor(
+    private client: NexicalClient,
+    rawConfig: unknown
+  ) {
+    this.config = SupervisorConfigSchema.parse(rawConfig);
+    this.setupSignalHandlers();
+  }
+
+  /**
+   * Spawns the agent processor based on the environment and entrypoint type.
+   * Runtime supervisors MUST detect the entrypoint type and use the appropriate execution engine.
+   */
+  public async spawnProcessor(): Promise<void> {
+    const { entryPoint, restartDelay } = this.config;
+
+    if (entryPoint.endsWith('.ts')) {
+      // Development (.ts via tsx)
+      this.child = spawn('npx', ['tsx', entryPoint], {
+        stdio: 'inherit',
+        env: { ...process.env },
+      });
+    } else {
+      // Production (.js via node fork)
+      this.child = fork(entryPoint, [], {
+        stdio: 'inherit',
+      });
+    }
+
+    this.child.on('exit', (code) => {
+      console.warn(`Child process exited with code ${code}. Restarting in ${restartDelay / 1000}s...`);
+      setTimeout(() => this.spawnProcessor(), restartDelay);
+    });
+  }
+
+  /**
+   * Implement signal-based lifecycle management for graceful shutdown.
+   */
+  private setupSignalHandlers(): void {
+    const shutdown = async () => {
+      console.info('Shutting down supervisor...');
+      if (this.child) {
+        this.child.kill('SIGTERM');
+      }
+      process.exit(0);
+    };
+
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+  }
+}

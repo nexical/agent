@@ -1,0 +1,65 @@
+import { z } from 'zod';
+import { type NexicalClient } from '@/lib/api.js';
+
+/**
+ * Zod schema for PersistentAgent configuration.
+ */
+export const PersistentAgentConfigSchema = z.object({
+  name: z.string(),
+  intervalMs: z.number().default(60000),
+});
+
+export type PersistentAgentConfig = z.infer<typeof PersistentAgentConfigSchema>;
+
+/**
+ * Abstract Base Class for Persistent Agents.
+ * Implementations extend this base class to define core logic.
+ */
+export abstract class PersistentAgent {
+  protected config: PersistentAgentConfig;
+  protected running: boolean = false;
+  protected logger: Console = console;
+
+  /**
+   * Dependencies are injected via the constructor.
+   * NEVER pull directly from process.env here.
+   */
+  constructor(
+    protected api: NexicalClient,
+    rawConfig: unknown
+  ) {
+    this.config = PersistentAgentConfigSchema.parse(rawConfig);
+  }
+
+  public get name(): string {
+    return this.config.name;
+  }
+
+  public async start(): Promise<void> {
+    if (this.running) return;
+    this.running = true;
+    this.logger.info(`[${this.name}] Starting persistent agent...`);
+
+    while (this.running) {
+      try {
+        await this.tick();
+      } catch (error: unknown) {
+        this.logger.error(`[${this.name}] Tick failed:`, error);
+      }
+
+      if (this.running) {
+        await new Promise((resolve) => setTimeout(resolve, this.config.intervalMs));
+      }
+    }
+  }
+
+  public stop(): void {
+    this.running = false;
+    this.logger.info(`[${this.name}] Stopping...`);
+  }
+
+  /**
+   * Domain-specific tick logic implemented by subclasses.
+   */
+  protected abstract tick(): Promise<void>;
+}

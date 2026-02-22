@@ -1,0 +1,52 @@
+import { z } from 'zod';
+import { JobProcessor, type AgentJob, type AgentContext } from '@nexical/agent/core/index.js';
+
+/**
+ * Payload schema for the {{name}} processor.
+ */
+export const {{pascalName}}PayloadSchema = z.object({
+  // Define your payload schema here
+});
+
+export type {{pascalName}}Payload = z.infer<typeof {{pascalName}}PayloadSchema>;
+
+/**
+ * {{pascalName}} Processor handles discrete jobs for '{{jobType}}'.
+ */
+export class {{pascalName}}Processor extends JobProcessor<{{pascalName}}Payload> {
+  /**
+   * Unique Job Type identifier.
+   */
+  public static jobType = '{{jobType}}';
+
+  /**
+   * Zod Schema for payload validation.
+   */
+  public schema = {{pascalName}}PayloadSchema;
+
+  /**
+   * Execution logic for the discrete job.
+   *
+   * @param job - The job record including its payload.
+   * @param context - Execution context providing API access and remote logging.
+   */
+  public async process(
+    job: AgentJob<{{pascalName}}Payload>,
+    context: AgentContext
+  ): Promise<unknown> {
+    const { id, payload } = job;
+    context.logger.info(`Started processing {{pascalName}} job for ID: ${id}`);
+
+    try {
+      // Example of using the payload:
+      // const result = await context.api.someModule.someMethod(payload);
+      context.logger.info(`Processing payload: ${JSON.stringify(payload)}`);
+
+      context.logger.info(`Successfully completed {{pascalName}} job`);
+      return { success: true };
+    } catch (error: unknown) {
+      context.logger.error(`Failed to process {{pascalName}} job: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+}

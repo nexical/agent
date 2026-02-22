@@ -1,0 +1,29 @@
+import { z } from 'zod';
+import { JobProcessor, type AgentJob, type AgentContext } from '@nexical/agent';
+
+export const __NAME__Schema = z.object({
+  // Define your job payload schema here
+  exampleField: z.string(),
+});
+
+export type __NAME__Payload = z.infer<typeof __NAME__Schema>;
+
+/**
+ * __NAME__Processor handles queue-based jobs for the __MODULE__ module.
+ * 
+ * NOTE: Registry Key: __MODULE__.__NAME__Processor
+ */
+export class __NAME__Processor extends JobProcessor<__NAME__Payload> {
+  public jobType = '__JOB_TYPE__';
+  public schema = __NAME__Schema;
+
+  public async process(job: AgentJob<__NAME__Payload>, ctx: AgentContext) {
+    ctx.logger.info(`Processing job ${job.id} for __NAME__`);
+    
+    const { exampleField } = job.payload;
+    
+    // Implement your job logic here
+    
+    return { success: true };
+  }
+}

@@ -1,0 +1,23 @@
+import { PersistentAgent, type AgentContext } from '@nexical/agent';
+
+/**
+ * __NAME__Agent runs continuously in a tick-based loop.
+ * 
+ * NOTE: Registry Key: __MODULE__.__NAME__Agent
+ */
+export class __NAME__Agent extends PersistentAgent {
+  public name = '__AGENT_NAME__';
+  public intervalMs = 60000; // Override the default 1-minute interval if necessary
+
+  /**
+   * Main lifecycle loop for the agent.
+   * This is executed every `intervalMs`.
+   */
+  public async tick(ctx: AgentContext) {
+    ctx.logger.info(`Ticking __NAME__Agent...`);
+    
+    // Implement your continuous background task logic here
+    
+    return { success: true };
+  }
+}
