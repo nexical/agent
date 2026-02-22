@@ -1,13 +1,13 @@
 # @app-core/agent
 
-This package implements a lightweight, polling-based agent that executes jobs from the Nexical Orchestrator. It is designed to run in any environment (Docker, Bare Metal, Serverless) and execute simplified "Workers" defined in your modules.
+This package implements a lightweight, polling-based agent that executes jobs from the Nexical Orchestrator. It is designed to run in any environment (Docker, Bare Metal, Serverless) and execute simplified "Processors" defined in your modules.
 
 ## 📚 Table of Contents
 
 1. [Architecture](#architecture)
 2. [Integration with Web App](#integration-with-web-app)
 3. [Authentication](#authentication)
-4. [Developing Processors (Workers)](#developing-processors-workers)
+4. [Developing Processors](#developing-processors)
 5. [Testing](#testing)
 6. [Deployment](#deployment)
 
@@ -20,7 +20,7 @@ The agent follows a **Pull Model** (Long Polling). It connects _outbound_ to the
 ### The Loop
 
 1.  **Poll**: The agent sends a `POST /api/orchestrator/poll` request with its `capabilities` (list of registered job types).
-2.  **Execute**: If a job is returned, the matching worker is found and executed.
+2.  **Execute**: If a job is returned, the matching processor is found and executed.
 3.  **Report**: The agent reports Success or Failure back to the Orchestrator.
 
 ---
@@ -34,13 +34,13 @@ The Agent System interacts with the main web application via the **Orchestrator 
 To trigger work for an agent, simply create a `Job` record in the database via the `OrchestratorService`.
 
 ```typescript
-import { OrchestratorService } from '@modules/orchestrator/src/lib/orchestrator-service';
+import { OrchestratorService } from '@modules/orchestrator/src/lib/orchestrator-service.js';
 
 // In an API Handler or Service
 await OrchestratorService.createJob({
-  type: 'project.sync', // Must match a registered worker
+  type: 'project.sync', // Must match a registered processor
   payload: {
-    // Must match the worker's Zod schema
+    // Must match the processor's Zod schema
     projectId: '123',
   },
   // Optional: Attribute to a user or team
@@ -56,19 +56,21 @@ The Orchestrator will queue this job. The next available Agent with the `project
 
 ### Agent Identity
 
-Access to the Orchestrator API is secured via a shared secret.
+Access to the Orchestrator API is secured via a Bearer token.
 
-- **Header**: `x-agent-secret`
-- **Environment Variable**: `AGENT_SECRET`
+- **Header**: `Authorization: Bearer <TOKEN>`
+- **Environment Variable**: `AGENT_API_TOKEN`
 
-### Worker Context (`AgentContext`)
+### Execution Context (`AgentContext`)
 
-When a worker runs, it receives an `AgentContext` object. This context contains an authenticated `NexicalClient` (SDK) that is pre-configured to communicate with the API.
+When a processor runs, it receives an `AgentContext` object. This context contains an authenticated `NexicalClient` (SDK) that is pre-configured to communicate with the API and a `logger` for remote job-specific logging.
 
 ```typescript
-// Worker Handler
-async handler(job, context) {
-    // ✅ Full Access to the API
+import type { AgentJob, AgentContext } from '@nexical/agent/core/index.js';
+
+// Processor Execution
+public async process(job: AgentJob<MyPayload>, context: AgentContext) {
+    // ✅ Full Access to the API via context.api
     await context.api.orchestrator.createJobLog({
         jobId: job.id,
         message: "Doing work...",
@@ -79,51 +81,51 @@ async handler(job, context) {
 
 ---
 
-## Developing Processors (Workers)
+## Developing Processors
 
-Workers are the logic units of the agent. They are defined **within your modules** to keep business logic collocated.
+The Agent uses a **Base Class Pattern** for defining logic units. These are defined **within your modules** to keep business logic collocated.
 
-### 1. Create a Worker File
+### 1. Create a Processor File
 
-Create a file in `modules/{your-module}/src/agent/{worker-name}.ts`.
+Create a file in `modules/{your-module}/src/agent/{processor-name}.ts`.
 
 ```typescript
-// modules/email/src/agent/send-welcome.ts
-import type { AgentWorker } from '@modules/orchestrator/src/types';
+// modules/email/src/agent/welcome-processor.ts
 import { z } from 'zod';
+import { JobProcessor, type AgentJob, type AgentContext } from '@nexical/agent/core/index.js';
 
 // 1. Define Payload Schema
-const PayloadSchema = z.object({
+export const WelcomePayloadSchema = z.object({
   email: z.string().email(),
   name: z.string(),
 });
 
-// 2. Export Worker Definition
-export const worker: AgentWorker<z.infer<typeof PayloadSchema>> = {
-  jobType: 'email.send-welcome', // Unique Job Type
-  schema: PayloadSchema,
+export type WelcomePayload = z.infer<typeof WelcomePayloadSchema>;
 
-  // 3. Implement Handler
-  handler: async (job, context) => {
+// 2. Implement Processor Class
+export class WelcomeProcessor extends JobProcessor<WelcomePayload> {
+  public static jobType = 'email.send-welcome'; // Unique Job Type
+  public schema = WelcomePayloadSchema;
+
+  // 3. Implement Execution Logic
+  public async process(job: AgentJob<WelcomePayload>, context: AgentContext): Promise<unknown> {
     const { email, name } = job.payload;
     context.logger.info(`Sending email to ${email}`);
 
-    // ... perform work ...
+    // ... perform work using context.api or other services ...
 
     return { sent: true }; // Result stored in Job.result
-  },
-};
+  }
+}
 ```
 
-### 2. Generate Registry
+### 2. Register Processor
 
-Run the generator to register your new worker.
+Add your class to the agent's registry in `packages/agent/src/registry.js`.
 
 ```bash
 npm run gen:agent
 ```
-
-This updates `packages/agent/src/registry.ts`.
 
 ---
 
@@ -131,18 +133,19 @@ This updates `packages/agent/src/registry.ts`.
 
 We support both **Unit Tests** (fast, mocked) and **Integration Tests** (comprehensive, real DB).
 
-### 1. Unit Testing Workers
+### 1. Unit Testing Processors
 
 Use `AgentRunner.invoke` to test logic in isolation.
 
 ```typescript
 // modules/email/tests/unit/agent.test.ts
 import { describe, it, expect } from 'vitest';
-import { AgentRunner } from '@modules/orchestrator/tests/integration/lib/agent-runner';
-import { worker } from '../../src/agent/send-welcome';
+import { AgentRunner } from '@modules/orchestrator/tests/integration/lib/agent-runner.js';
+import { WelcomeProcessor } from '../../src/agent/welcome-processor.js';
 
 it('should send email', async () => {
-  const result = await AgentRunner.invoke(worker, {
+  const processor = new WelcomeProcessor();
+  const result = await AgentRunner.invoke(processor, {
     email: 'test@example.com',
     name: 'Test',
   });
@@ -157,21 +160,22 @@ Use `AgentRunner.run` to test the full flow with a database.
 ```typescript
 // modules/email/tests/integration/agent/send-welcome.test.ts
 import { describe, it, expect } from 'vitest';
-import { AgentRunner } from '@modules/orchestrator/tests/integration/lib/agent-runner';
-import { worker } from '@modules/email/src/agent/send-welcome';
-import { db } from '@/lib/db';
+import { AgentRunner } from '@modules/orchestrator/tests/integration/lib/agent-runner.js';
+import { WelcomeProcessor } from '../../src/agent/welcome-processor.js';
+import { db } from '@/lib/db.js';
 
 it('should process queued job', async () => {
   // 1. Create Job in DB
   const job = await db.job.create({
     data: {
-      type: 'email.send-welcome',
+      type: WelcomeProcessor.jobType,
       payload: { email: 'real@db.com', name: 'Real' },
     },
   });
 
   // 2. Run Agent Harness
-  const result = await AgentRunner.run(worker, job.id);
+  const processor = new WelcomeProcessor();
+  const result = await AgentRunner.run(processor, job.id);
 
   // 3. Verify Side Effects
   expect(result.sent).toBe(true);
@@ -193,7 +197,7 @@ Tests for the Agent Runtime itself (auth, polling loop) are located in `packages
 
 | Variable              | Required | Default         | Description                |
 | --------------------- | -------- | --------------- | -------------------------- |
-| `AGENT_API_URL`       | Yes      | -               | ArcNexus server API URL    |
+| `AGENT_API_URL`       | Yes      | -               | Nexical server API URL     |
 | `AGENT_API_TOKEN`     | Yes      | -               | Agent authentication token |
 | `AGENT_CAPABILITIES`  | No       | `*`             | Comma-separated job types  |
 | `AGENT_HOSTNAME`      | No       | System hostname | Agent identifier           |

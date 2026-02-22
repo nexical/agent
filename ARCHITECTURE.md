@@ -35,13 +35,14 @@ Defines a worker that runs continuously in a loop (tick-based).
 
 The runtime details are orchestrated inside `src/runtime/`.
 
-### 3.1 The Supervisor (`AgentSupervisor`)
+### 3.1 The Supervisor Pattern (`AgentSupervisor`)
 
 When the main process boots, the `AgentSupervisor` reads all registered `PersistentAgent` classes from the registry and spawns them.
 
 - **Isolation**: Each persistent agent runs in a child process (via `fork` in production or `spawn` with `tsx` in development).
 - **Resilience**: The supervisor listens for exit signals from children and automatically restarts them after a 5-second backoff.
 - **Graceful Shutdown**: Intercepts `SIGINT`/`SIGTERM` to safely terminate all child processes before exiting the main process.
+- **Environment Awareness**: The supervisor MUST detect the entrypoint type and use the appropriate engine (`tsx` for development, `node` fork for production).
 
 ### 3.2 The Poller & Executor
 
@@ -76,15 +77,16 @@ When adding new capabilities to the agent, adhere strictly to these patterns:
 
 ### Adding a Job Processor
 
-1. Create a class extending `JobProcessor<T>`.
+1. Create a class extending `JobProcessor<T>` in `apps/backend/modules/{module}/src/agent/{ClassName}.ts`.
 2. Define your payload schema using `zod`.
 3. Implement the `process` method. Use `context.logger` for remote observability, avoiding standard `console.log` for job-specific execution flows.
-4. Export the class and register it in `src/registry.ts` under `jobProcessors`.
+4. **DO NOT** manually edit `src/registry.ts`. The discovery script handles registration automatically.
+5. Trigger registration by running `npm run generate` in the `packages/agent` directory.
 
 ```typescript
-// Example Implementation
+// Example Implementation (apps/backend/modules/orchestrator-api/src/agent/EchoProcessor.ts)
 import { z } from 'zod';
-import { JobProcessor, type AgentJob, type AgentContext } from '../core/index.js';
+import { JobProcessor, type AgentJob, type AgentContext } from '@nexical/agent';
 
 export const MyJobSchema = z.object({ targetPath: z.string() });
 export type MyJobPayload = z.infer<typeof MyJobSchema>;
@@ -103,16 +105,26 @@ export class MyJobProcessor extends JobProcessor<MyJobPayload> {
 
 ### Adding a Persistent Agent
 
-1. Create a class extending `PersistentAgent`.
+1. Create a class extending `PersistentAgent` in `apps/backend/modules/{module}/src/agent/{ClassName}.ts`.
 2. Define the `name` and (optionally) override `intervalMs`.
 3. Implement the `tick()` method.
-4. Export the class and register it in `src/registry.ts` under `processors`.
+4. Trigger registration by running `npm run generate` in the `packages/agent` directory.
+
+### Automated Discovery & Registration
+
+The Nexus Agent utilizes a centralized registry for background agents and job processors discovered across backend modules.
+
+- **Discovery Root**: The system scans `apps/backend/modules/*/src/agent/*.ts` for valid classes.
+- **Registry Key Convention**: Keys MUST follow the format `{module-name}.{ClassName}` (e.g., `orchestrator-api.EchoProcessor`).
+- **Trigger**: The file `packages/agent/src/registry.ts` is machine-generated and MUST NOT be edited manually. Run `npm run generate` to refresh the registry.
 
 ### Dependency Rules and Hygiene
 
+- **Strict Naming**: Agent implementation classes MUST use PascalCase and include a functional suffix: `Processor` for queue-based jobs (`JobProcessor`) or `Agent` for continuous tasks (`PersistentAgent`).
 - **Strict Typing**: The `any` type is strictly forbidden. Use Zod schemas to derive TypeScript types automatically.
 - **Isolation**: Processors must not maintain shared memory state, as they may be executed concurrently or across different agent nodes.
 - **API Access**: Always utilize the `this.api` (Nexical SDK client) or the `context.api` injected into job processors. Do not construct raw `fetch` calls to the orchestrator.
+- **ESM Module Imports**: Local file imports in TypeScript MUST include the `.js` extension to ensure compatibility with the ESM runtime (e.g., `import { MyService } from './my-service.js'`).
 
 ## 6. Execution Flow Summary
 
@@ -123,3 +135,14 @@ export class MyJobProcessor extends JobProcessor<MyJobPayload> {
 5. **Poller Loop**: Main process polls for jobs.
    - On Job -> `JobExecutor` -> Validate -> Execute -> Complete/Fail.
 6. **Child Loops**: Child processes run `PersistentAgent.tick()` independently.
+
+---
+
+## 7. Rule Summary (MANDATORY)
+
+- **ESM Import Compliance**: All relative imports MUST include the `.js` extension even when writing in TypeScript (e.g., `import { MyService } from './my-service.js'`).
+- **Named Exports Only**: Core classes, interfaces, and constants MUST be exported using named exports. Default exports are strictly forbidden.
+- **Constructor-Based Dependency Injection**: All classes MUST receive their dependencies (clients, loggers, config) via the constructor. Do NOT pull directly from `process.env` in the constructor.
+- **Persistent Lifecycle Management**: Persistent agents MUST use a controlled `while(this.running)` loop with a `try/catch` wrapper for the `tick()` method to isolate individual failure events.
+- **Environment-First Configuration**: Agent configuration (API URLs, Tokens, Intervals) MUST prioritize `AGENT_*` environment variables.
+- **Standardized SDK Client**: Agents MUST use `NexicalClient` with the appropriate `AgentAuthStrategy` for all API interactions.
