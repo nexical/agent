@@ -24,13 +24,13 @@ pnpm-debug.log*
 # jetbrains setting folder
 .idea/
 
-# Testing
+# testing
 coverage.json
 coverage/
-playwright-report/
-test-results*/
-blob-report/
 
-# Modular Architecture Artifacts
+# reskiller files 
+.agent/tmp/
+
+# generated code
 src/registry.ts
 
