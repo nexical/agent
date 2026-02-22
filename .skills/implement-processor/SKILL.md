@@ -13,7 +13,7 @@ The Agent system follows a **Base Class Pattern**. Instead of using raw object d
 
 ## Workflow
 
-1.  **Define Domain**: Identify if the task is a discrete job (Queue-based) or a continuous process (Loop-based).
+1.  **Define Domain**: Identify if the task is a discrete job (Pull-based via `JobPoller`) or a continuous process (Loop-based via `PersistentAgent`).
 2.  **Select Base Class**:
     - Use `JobProcessor<T>` for discrete tasks (e.g., "Send Email", "Resize Image").
     - Use `PersistentAgent` for continuous tasks (e.g., "Sync Files", "Monitor Health").
@@ -27,6 +27,17 @@ The Agent system follows a **Base Class Pattern**. Instead of using raw object d
     - Use **Type-Only Imports** (`import type`) where appropriate.
     - Avoid `any` strictly. Use `unknown` with comments for circular dependency mitigation.
     - Use **Configuration-Driven Initialization**: Prefer explicit configuration objects or environment variables for initialization.
+6.  **Registration & Discovery**:
+    The Agent system utilizes an **Automated Registry**. You do NOT need to manually register your processor.
+    1.  Ensure your file is located within the `src/modules/` or `src/processors/` directory (depending on project structure).
+    2.  Ensure your class is **Named Exported**.
+    3.  Run the generation script (usually part of the build process):
+        ```bash
+        npm run generate
+        # or
+        npx tsx scripts/generate.ts
+        ```
+    4.  This will update `src/registry.ts` automatically. **NEVER manually edit `src/registry.ts`.**
 
 ## Critical Patterns
 
@@ -70,6 +81,8 @@ api: unknown; // NexicalClient (Used as unknown to prevent circular dependency)
 ### 5. Configuration-Driven Initialization
 
 Use explicit configuration objects or environment variables for infrastructure setup.
+
+- **Standard Environment Variables**: Ensure `AGENT_API_TOKEN` and `AGENT_API_URL` are set in your environment, as the base classes rely on these for Orchestrator communication.
 
 ```typescript
 constructor(config: ProcessorConfig) {
