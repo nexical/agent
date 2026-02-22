@@ -1,3 +1,8 @@
+---
+name: implement-processor
+description: 'This skill defines the workflow for implementing `JobProcessor` and `PersistentAgent` classes within the Nexical Agent system.'
+---
+
 # Skill: Agent Implement Processor
 
 This skill defines the workflow for implementing `JobProcessor` and `PersistentAgent` classes within the Nexical Agent system.

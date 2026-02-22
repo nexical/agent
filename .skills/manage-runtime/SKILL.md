@@ -1,3 +1,8 @@
+---
+name: manage-runtime
+description: 'This skill provides guidance on managing the lifecycle and execution environment of Nexical Agents. It focuses on the **Supervisor Pattern**, ensuring process stability, automatic recovery, and enviro...'
+---
+
 # Skill: Manage Runtime
 
 **ID**: `manage-runtime`

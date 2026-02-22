@@ -1,3 +1,8 @@
+---
+name: registry-discovery
+description: 'This skill governs the **Automated Discovery Protocol** for background agents and job processors within the Nexus Ecosystem.'
+---
+
 # Skill: Agent Registry Discovery
 
 This skill governs the **Automated Discovery Protocol** for background agents and job processors within the Nexus Ecosystem.

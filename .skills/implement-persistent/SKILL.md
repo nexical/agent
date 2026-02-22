@@ -1,3 +1,8 @@
+---
+name: implement-persistent
+description: 'Guide for implementing continuous, tick-based background workers within the Nexus Agent ecosystem.'
+---
+
 # Skill: Implement Persistent Agent
 
 Guide for implementing continuous, tick-based background workers within the Nexus Agent ecosystem.
