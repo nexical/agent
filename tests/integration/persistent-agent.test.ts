@@ -26,7 +26,7 @@ describe('Persistent Agent Integration', () => {
     savedEnv = { ...process.env };
 
     const adminClient = new ApiClient(TestServer.getUrl());
-    const actor = await adminClient.as('user', { role: 'ADMIN' });
+    const actor = await adminClient.as('user', { role: 'USER_ADMIN' });
 
     process.env.AGENT_API_TOKEN = actor.token.rawKey;
     process.env.AGENT_API_URL = TestServer.getUrl() + '/api';

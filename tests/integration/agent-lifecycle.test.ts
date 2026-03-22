@@ -17,7 +17,7 @@ describe('Agent Lifecycle Integration', () => {
 
     // Get a valid ADMIN token for the agent
     const adminClient = new ApiClient(TestServer.getUrl());
-    const actor = await adminClient.as('user', { role: 'ADMIN' });
+    const actor = await adminClient.as('user', { role: 'USER_ADMIN' });
 
     // Find the rawKey from the actor registry or directly from the actor object returned by client.as
     // In our integration tests, client.as('user') returns { ...user, token: { rawKey } }
@@ -53,8 +53,9 @@ describe('Agent Lifecycle Integration', () => {
     });
 
     // 3. Create a Job via API
+    // Use the SAME apiToken we got in beforeEach to ensure actorId matches
     const userClient = new ApiClient(TestServer.getUrl());
-    await userClient.as('user', { role: 'ADMIN' });
+    userClient.useToken(apiToken);
     const jobRes = await userClient.post('/api/job', {
       type: 'test.echo',
       payload: { input: 'hello world' },
@@ -66,7 +67,14 @@ describe('Agent Lifecycle Integration', () => {
     await poller.pollOnce();
 
     // 5. Verify Job is completed in DB
+    // Use the apiToken we got in beforeEach
+    userClient.useToken(apiToken);
     const finalJobRes = await userClient.get(`/api/job/${jobId}`);
+    console.log('[Test] Final Job Response:', {
+      status: finalJobRes.status,
+      body: JSON.stringify(finalJobRes.body, null, 2),
+    });
+    expect(finalJobRes.status).toBe(200);
     expect(finalJobRes.body.data.status).toBe('COMPLETED');
     expect(finalJobRes.body.data.result.data).toEqual({ output: 'hello world' });
     expect(finalJobRes.body.data.lockedBy).toBeTruthy();
@@ -97,8 +105,9 @@ describe('Agent Lifecycle Integration', () => {
     });
 
     // Create Job
+    // Use the SAME apiToken we got in beforeEach to ensure actorId matches
     const userClient = new ApiClient(TestServer.getUrl());
-    await userClient.as('user', { role: 'ADMIN' });
+    userClient.useToken(apiToken);
     const jobRes = await userClient.post('/api/job', {
       type: 'test.fail',
       payload: { input: 'wont work' },
@@ -110,7 +119,9 @@ describe('Agent Lifecycle Integration', () => {
     await poller.pollOnce();
 
     // Verify failure
+    userClient.useToken(apiToken);
     const finalJobRes = await userClient.get(`/api/job/${jobId}`);
+    expect(finalJobRes.status).toBe(200);
     expect(finalJobRes.body.data.status).toBe('FAILED');
     expect(finalJobRes.body.data.error).toBe('Simulated failure');
   });

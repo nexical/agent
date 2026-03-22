@@ -85,7 +85,7 @@ describe('AgentClient', () => {
   it('should update progress', async () => {
     mockUpdateProgress.mockResolvedValue({});
     await client.updateProgress('job-1', 50);
-    expect(mockUpdateProgress).toHaveBeenCalledWith('job-1', { progress: 50 });
+    expect(mockUpdateProgress).toHaveBeenCalledWith('job-1', { id: 'job-1', progress: 50 });
   });
 
   it('should create job', async () => {
