@@ -20,7 +20,7 @@
     "start": "npm run generate && bun run dist/main.js",
     "test": "npm run generate && npm run test:unit && npm run test:integration",
     "test:unit": "vitest run",
-    "test:integration": "vitest run -c vitest.integration.config.ts",
+    "test:integration": "cd ../../apps/backend && vitest run -c ../../packages/agent/vitest.integration.config.ts",
     "format": "prettier --write .",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

@@ -20,6 +20,6 @@ export default defineConfig((config) => {
   );
 
   // Overwrite include to only run integration tests
-  merged.test.include = ['tests/integration/**/*.test.ts'];
+  merged.test.include = [path.resolve(__dirname, 'tests/integration/**/*.test.ts')];
   return merged;
 });
